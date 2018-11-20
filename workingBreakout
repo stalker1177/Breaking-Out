@@ -1,0 +1,263 @@
+#include <iostream>
+#include <SFML/Graphics.hpp>
+#include <cmath>
+#include <random>
+#include <ctime>
+
+using namespace sf;
+using namespace std;
+
+class Block : public RectangleShape {
+private:
+    int hp = 1;
+public:
+    void setHP(int hp) {
+        Block::hp = hp;
+    }
+
+    int getHP() {
+        return hp;
+    };
+
+    bool isDead() {
+        return hp == 0;
+    }
+
+    void bams() {
+        hp--;
+    }
+
+
+};
+
+class Paddle : public RectangleShape {
+private:
+    float speed{};
+public:
+    float getSpeed() {
+        return speed;
+    }
+
+    void setSpeed(float speed) {
+        Paddle::speed = speed;
+    }
+};
+
+
+class Ball : public CircleShape {
+private:
+    float speed = 0;
+    float dx = 1;
+    float dy = 1;
+public:
+
+
+    void collisionScreen(Vector2u size) {
+        unsigned int screenWidth = size.x;
+        unsigned int screenHeight = size.y;
+
+        if ((getPosition().x + getRadius()) > screenWidth || (getPosition().x - getRadius()) < 0)
+            dx = -dx;
+        if ((getPosition().y + getRadius()) > screenHeight || (getPosition().y - getRadius()) < 0)
+            dy = -dy;
+    }
+
+    bool isDown(Vector2u size) {
+        unsigned int screenHeight = size.y;
+        return (getPosition().y + getRadius()) > screenHeight;
+    }
+
+    bool inCircle(Vector2f pointcoords) {
+        float px = pointcoords.x - getPosition().x;
+        float py = pointcoords.y - getPosition().y;
+        double hypotenuse = sqrt(px * px + py * py);
+        return hypotenuse < getRadius();
+    }
+
+    bool inLineVert(float x0, float x1) {
+        return getPosition().x > x0 && getPosition().x < x1;
+    }
+
+    bool inLineHorizont(float y0, float y1) {
+        return getPosition().y > y0 && getPosition().y < y1;
+    }
+
+    bool collisionBlock(Vector2f position, Vector2f size) {
+        float x0 = position.x;
+        float y0 = position.y;
+        float x1 = size.x + x0;
+        float y1 = size.y + y0;
+
+        if (inLineVert(x0, x1)) {
+            if (inCircle(Vector2f(getPosition().x, y0)) || inCircle(Vector2f(getPosition().x, y1))) {
+                dy = -dy;
+                return true;
+            }
+        } else if (inLineHorizont(y0, y1)) {
+            if (inCircle(Vector2f(x0, getPosition().y)) || inCircle(Vector2f(x1, getPosition().y))) {
+                dx = -dx;
+                return true;
+            }
+
+        } else if (inCircle(Vector2f(x0, y0)) ||
+                   inCircle(Vector2f(x0, y1)) ||
+                   inCircle(Vector2f(x1, y0)) ||
+                   inCircle(Vector2f(x1, y1))) {
+            dx = -dx;
+            dy = -dy;
+            return true;
+        }
+
+        return false;
+    }
+
+    bool collisionPaddle(Paddle &paddle) {
+        float x0 = paddle.getPosition().x;
+        float y0 = paddle.getPosition().y;
+        float x1 = paddle.getSize().x + x0;
+        float y1 = paddle.getSize().y + y0;
+        mt19937 rand;
+        rand.seed(static_cast<unsigned int>(time(nullptr)));
+
+        if (inLineVert(x0, x1)) {
+            if (inCircle(Vector2f(getPosition().x, y0)) || inCircle(Vector2f(getPosition().x, y1))) {
+                dy = -dy;
+                dx = inLineVert(x0,x0+paddle.getSize().x/2) ? -((rand() % 50 + 50) / 100.f) : ((rand() % 50 + 50) / 100.f);
+                return true;
+            }
+        } else if (inLineHorizont(y0, y1)) {
+            if (inCircle(Vector2f(x0, getPosition().y)) || inCircle(Vector2f(x1, getPosition().y))) {
+                cout << "sides" << endl;
+                dx = -dx;
+                cout << "dx " << dx << " dy " << dy << endl;
+                return true;
+            }
+
+        } else if (inCircle(Vector2f(x0, y0)) ||
+                   inCircle(Vector2f(x0, y1)) ||
+                   inCircle(Vector2f(x1, y0)) ||
+                   inCircle(Vector2f(x1, y1))) {
+
+            cout << "angle" << endl;
+
+            dx = -dx;
+            dy = -dy;
+            cout << "dx " << dx << " dy " << dy << endl;
+            return true;
+        }
+
+        return false;
+    }
+
+
+    float getdx() {
+        return dx;
+    }
+
+    float getdy() {
+        return dy;
+    }
+
+    float getSpeed() {
+        return speed;
+    }
+
+    void setSpeed(float speed) {
+        Ball::speed = speed;
+    }
+
+};
+
+int main() {
+
+    RenderWindow window(VideoMode(800, 600), "Test");
+    mt19937 rand;
+    rand.seed(static_cast<unsigned int>(time(nullptr)));
+
+    Ball ball;
+    ball.setRadius(5.f);
+    ball.setFillColor(Color::Black);
+    ball.setPosition(200, 300);
+    ball.setOrigin(5, 5);
+    ball.setSpeed(0.15f);
+
+    int n = 0;
+    Block block[200];
+
+    Paddle paddle;
+    paddle.setSize(Vector2f(100, 15));
+    paddle.setFillColor(Color::Blue);
+    paddle.setPosition(300, 550);
+    paddle.setSpeed(0.2f);
+
+    for (int i = 1; i <= 17; i++)
+        for (int j = 1; j <= 10; j++) {
+            block[n].setSize(Vector2f(40, 20));
+            block[n].setHP(rand() % 3 + 1);
+            block[n].setPosition(i * 43, j * 23);
+            n++;
+        }
+    while (window.isOpen()) {
+
+        Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == Event::Closed) {
+                window.close();
+            }
+        }
+        for (int i = 0; i < n; i++)
+            if (block[i].getHP() == 3)
+                block[i].setFillColor(Color(251, 129, 70));
+            else if (block[i].getHP() == 2)
+                block[i].setFillColor(Color(251, 210, 70));
+            else if (block[i].getHP() == 1)
+                block[i].setFillColor(Color(150, 252, 69));
+
+
+        ball.collisionScreen(window.getSize());
+
+        for (int i = 0; i < n; i++)
+            if (ball.collisionBlock(block[i].getPosition(), block[i].getSize())) {
+                block[i].bams();
+                if (block[i].isDead())
+                    block[i].setPosition(-100, 0);
+            }
+
+        if (ball.isDown(window.getSize())) {
+            cout << "Auch";
+        }
+
+        ball.collisionPaddle(paddle);
+
+        if (event.type == Event::KeyPressed && event.key.code == Keyboard::Left) {
+            if (paddle.getPosition().x > 0) {
+                paddle.move(-paddle.getSpeed(), 0);
+            }
+        }
+
+
+        if (event.type == Event::KeyPressed && event.key.code == Keyboard::Right)
+            if (paddle.getPosition().x + paddle.getSize().x < window.getSize().x) {
+                paddle.move(paddle.getSpeed(), 0);
+            }
+        if (event.type == Event::KeyPressed && event.key.code == Keyboard::Up) {
+            ball.setSpeed(ball.getSpeed() + 0.0005f);
+
+        }
+        if (event.type == Event::KeyPressed && event.key.code == Keyboard::Down) {
+            if (ball.getSpeed() > 0.001)
+                ball.setSpeed(ball.getSpeed() - 0.0005f);
+        }
+
+
+        window.clear(Color(133, 188, 188));
+
+        for (int i = 0; i < n; i++)
+            window.draw(block[i]);
+        ball.move(ball.getSpeed() * ball.getdx(), ball.getSpeed() * ball.getdy());
+        window.draw(paddle);
+        window.draw(ball);
+        window.display();
+    }
+    return 0;
+}
