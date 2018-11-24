@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.12)
+project(untitled)
+
+set(CMAKE_CXX_STANDARD 17)
+set(SFML_STATIC_LIBRARIES TRUE)
+set(SFML_DIR "Z:/AutoProgs/SFML-2.5.1-windows-gcc-7.3.0-mingw-32-bit/SFML-2.5.1/lib/cmake/SFML")
+
+find_package(SFML COMPONENTS graphics audio window REQUIRED)
+
+add_executable(untitled main.cpp)
+
+target_link_libraries(untitled sfml-graphics sfml-audio sfml-window)
